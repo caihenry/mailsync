@@ -1,0 +1,34 @@
+1. How to get decode this attachment filename with python?
+ Refer to https://stackoverflow.com/questions/28985743/how-to-get-decode-this-attachment-filename-with-python
+
+There are two Encoded-Word sections in that header. You'd have to detect where one ends and one begins:
+
+>>> print  decode_header(encoded_filename[:28])[0]
+('SalesInvoice', 'utf-8')
+>>> print  decode_header(encoded_filename[28:])[0]
+('-Report.pdf', 'utf-8')
+
+Apparently that's what Thunderbird does in this case; split the string into =?encoding?data?= chunks. Normally these should be separated by \r\n (CARRIAGE RETURN + LINE FEED) characters, but in your case they are mashed up together. If you re-introduce the \r\n separator the value decodes correctly:
+
+>>> decode_header(encoded_filename[:28] + '\r\n' + encoded_filename[28:])[0]
+('SalesInvoice-Report.pdf', 'utf-8')
+
+You could use a regular expression to extract the parts and re-introduce the separator:
+
+import re
+from email.header import decode_header
+
+quopri_entry = re.compile(r'=\?[\w-]+\?[QB]\?[^?]+?\?=')
+
+def decode_multiple(encoded, _pattern=quopri_entry):
+    fixed = '\r\n'.join(_pattern.findall(encoded))
+    output = [b.decode(c) for b, c in decode_header(fixed)]
+    return ''.join(output)
+
+Demo:
+
+>>> encoded_filename = '=?UTF-8?B?U2FsZXNJbnZvaWNl?==?UTF-8?B?LVJlcG9ydC5wZGY=?='
+>>> decode_multiple(encoded_filename)
+u'SalesInvoice-Report.pdf'
+
+Of course, it could be that you have a bug in how you read the header in the first place. Make sure you don't accidentally destroy an existing \r\n separator when extracting the encoded_filename value.

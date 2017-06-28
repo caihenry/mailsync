@@ -1,0 +1,7 @@
+v0.1
+1. receive mails from the remote mail server.
+2. transfer attachments and contents of mails to the specific local directory.
+
+v0.2
+1. parse the category name from the subject with the pattern of subdirectory-subject.
+2. save file to subdirectory by categories.
